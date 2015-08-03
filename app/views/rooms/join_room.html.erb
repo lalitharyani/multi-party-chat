@@ -103,7 +103,7 @@
       <div class="form_elem" id= "setting_box">
         <p class= "countdown-class">
           <%= link_to image_tag('end_call.png'), "javascript:void(0);", title: "End Call", style: "width:40px;height:30px;display:none;", onclick: "disconnect(); return false;", id: "call_end_btn" %>
-          <%= link_to "Reconnect", meeting_room_path(uid: current_user.id, eid: @room.milestone.id, etoken: @room.milestone.event_token), title: "reconnect Call", id: "reconnect_btn", class: "btn btn-primary" %>
+          <%= link_to "Reconnect", join_room_path, title: "reconnect Call", id: "reconnect_btn", class: "btn btn-primary" %>
         </p>
       </div>
     </div>
