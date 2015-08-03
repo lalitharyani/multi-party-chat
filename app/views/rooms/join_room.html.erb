@@ -1,0 +1,111 @@
+<% config = YAML.load_file("#{Rails.root.to_s}/config/tokbox.yml")[Rails.env] %>
+
+<script src='https://swww.tokbox.com/webrtc/v2.0/js/TB.min.js'></script>
+
+<script type="text/javascript">
+    // Initialize API key, session, and token...
+    // Think of a session as a room, and a token as the key to get in to the room
+    // Sessions and tokens are generated on your server and passed down to the client
+    var apiKey = "<%= config['TOKBOX_API_KEY'] %>";
+    var connectionCount = 0;
+
+    TB.addEventListener("exception", exceptionHandler);
+    var session = TB.initSession("<%= @room.session_id %>");
+    session.addEventListener("sessionConnected", sessionConnectedHandler);
+    session.addEventListener("streamCreated", streamCreatedHandler);
+    session.addEventListener("connectionDestroyed", connectionDestroyedHandler);
+    session.connect(apiKey, "<%= @room.token %>");
+
+    function sessionConnectedHandler(event) {
+      subscribeToStreams(event.streams);
+      $('#publisher_replace').show();
+      publisher = TB.initPublisher(apiKey, "publisher_replace", {
+      width: 280, height: 200, wmode: "window"});
+      session.publish(publisher);
+      publisher.publishAudio(true);
+       
+    }
+      
+    function streamCreatedHandler(event) {
+      subscribeToStreams(event.streams);
+    }
+    
+    function subscribeToStreams(streams) {
+      $('#connceting_img').hide();
+
+      for (var i = 0; i < streams.length; i++) {
+        var stream = streams[i];
+        //console.log(stream.connection.connectionId+"&"+session.connection.connectionId);
+        if (stream.connection.connectionId != session.connection.connectionId) {
+          var newDiv = document.createElement("div");
+          newDiv.id = "subscriber_replace_" + stream.connection.connectionId;
+
+          document.getElementById("subscriber_container").appendChild(newDiv);
+
+          $('#subscriber_replace_'+ stream.connection.connectionId).css({"float":"left",'margin-left': "15px", 'margin-top': "20px"});
+          
+          subscriber = session.subscribe(stream, newDiv, {width: 280, height: 200});
+          subscriber.subscribeToAudio(true);
+          subscriber.setAudioVolume(100);
+
+        }
+      } 
+
+      connectionCount += streams.length;
+      if (connectionCount >= 1){
+        $('#call_end_btn').show();
+      }else{
+         $('#call_end_btn').hide();
+      } 
+    }
+
+    ////handle the exception durin video call
+    function exceptionHandler(event) {
+      $('#connceting_img').hide();
+      alert(event.message);
+    }
+      
+    /////this method will disconnet the session and close the web cam & microphone
+    function disconnect() {
+      $('#connceting_img').hide();
+      $('#call_end_btn').hide();
+      session.disconnect();
+    }
+
+    function connectionDestroyedHandler(event) {
+      $('#call_end_btn').hide();
+     
+    }
+
+    ////this method reconnec the session again
+    function reconnect(key, token){
+      session.connect(apiKey, token);
+    }
+</script>
+
+<div class="row">
+  <div class="col-md-7">
+    <div class="row">
+      <div id="chatBox">
+        <div class="form_elem" id= "connceting_img" style= "text-align:center;">
+          <%= image_tag "connecting.gif" %>
+        </div>
+               
+        <div id="publisher_container" style= "text-align:center;">
+          <div class= "people-item" id="publisher_replace" style= "border: 2px red solid;display:none;margin-left:10px; "></div>
+        </div>
+             
+        <div id="subscriber_container">
+          <div id="subscriber_replace" ></div>
+        </div>
+         
+      </div> 
+      <div class="form_elem" id= "setting_box">
+        <p class= "countdown-class">
+          <%= link_to image_tag('end_call.png'), "javascript:void(0);", title: "End Call", style: "width:40px;height:30px;display:none;", onclick: "disconnect(); return false;", id: "call_end_btn" %>
+          <%= link_to "Reconnect", meeting_room_path(uid: current_user.id, eid: @room.milestone.id, etoken: @room.milestone.event_token), title: "reconnect Call", id: "reconnect_btn", class: "btn btn-primary" %>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
